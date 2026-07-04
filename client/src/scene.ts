@@ -8,6 +8,12 @@ export interface WallHit {
   point: THREE.Vector3;
 }
 
+const CAN_STANDOFF = 1.4;
+
+function clamp(v: number, lo: number, hi: number) {
+  return Math.max(lo, Math.min(hi, v));
+}
+
 export class GraffaScene {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
@@ -20,6 +26,10 @@ export class GraffaScene {
   private capMaterial!: THREE.MeshStandardMaterial;
   private clock = new THREE.Clock();
   private idleT = 0;
+  private lastDt = 0;
+  private aimPlane!: THREE.Plane;
+  private canTargetQuat!: THREE.Quaternion;
+  private canInitialized = false;
 
   constructor(container: HTMLElement, wallTexture: THREE.Texture) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -40,6 +50,7 @@ export class GraffaScene {
     this.buildEnvironment();
     this.buildLights();
     this.buildCan();
+    this.buildAimPlane();
     this.scene.add(this.particles.group);
 
     this.onResize();
@@ -124,12 +135,23 @@ export class GraffaScene {
     nozzle.position.z = 0.42;
 
     this.canGroup.add(body, cap, nozzle);
-    this.canGroup.visible = false;
     this.scene.add(this.canGroup);
+  }
+
+  // A plane facing the (fixed) camera, floating CAN_STANDOFF units in front of the
+  // wall. Used only to position/orient the cosmetic can model — it always has a
+  // valid intersection, unlike raycastWall which is bounded to the wall mesh.
+  private buildAimPlane() {
+    const normal = new THREE.Vector3().subVectors(this.camera.position, this.wallMesh.position).normalize();
+    const point = this.wallMesh.position.clone().addScaledVector(normal, CAN_STANDOFF);
+    this.aimPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(normal, point);
+    this.canTargetQuat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal.clone().negate());
   }
 
   setCapColor(hex: string) {
     this.capMaterial.color.set(hex);
+    this.capMaterial.emissive.set(hex);
+    this.capMaterial.emissiveIntensity = 0.4;
   }
 
   raycastWall(ndcX: number, ndcY: number): WallHit | null {
@@ -144,20 +166,32 @@ export class GraffaScene {
     };
   }
 
-  updateCan(hitPoint: THREE.Vector3 | null, spraying: boolean) {
-    if (!hitPoint) {
-      this.canGroup.visible = false;
-      return;
-    }
-    this.canGroup.visible = true;
-    const viewDir = new THREE.Vector3().subVectors(this.camera.position, hitPoint).normalize();
-    const standoff = 1.4;
-    const canPos = hitPoint.clone().addScaledVector(viewDir, standoff);
-    this.canGroup.position.copy(canPos);
+  // Always resolves to a point (the aim plane spans the whole view for this fixed
+  // camera), clamped so the can can't drift absurdly far past the wall's edges.
+  raycastAimPlane(ndcX: number, ndcY: number): THREE.Vector3 {
+    this.raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), this.camera);
+    const target = new THREE.Vector3();
+    const hit = this.raycaster.ray.intersectPlane(this.aimPlane, target);
+    if (!hit) target.copy(this.raycaster.ray.origin).addScaledVector(this.raycaster.ray.direction, CAN_STANDOFF + 8);
 
-    const nozzleDir = viewDir.clone().negate();
-    const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), nozzleDir);
-    this.canGroup.quaternion.slerp(q, 1);
+    const maxX = WORLD_WALL_WIDTH / 2 + 2;
+    const maxY = WORLD_WALL_HEIGHT / 2 + 2;
+    target.x = clamp(target.x, -maxX, maxX);
+    target.y = clamp(target.y, -maxY, maxY);
+    return target;
+  }
+
+  updateCan(targetPoint: THREE.Vector3, spraying: boolean, dt: number) {
+    if (!this.canInitialized) {
+      this.canGroup.position.copy(targetPoint);
+      this.canGroup.quaternion.copy(this.canTargetQuat);
+      this.canInitialized = true;
+    } else {
+      const posAlpha = 1 - Math.exp(-10 * dt);
+      const rotAlpha = 1 - Math.exp(-8 * dt);
+      this.canGroup.position.lerp(targetPoint, posAlpha);
+      this.canGroup.quaternion.slerp(this.canTargetQuat, rotAlpha);
+    }
 
     const wobble = spraying ? Math.sin(performance.now() * 0.05) * 0.02 : 0;
     this.canGroup.rotateZ(wobble);
@@ -179,10 +213,16 @@ export class GraffaScene {
     this.renderer.setSize(w, h);
   }
 
+  // Advances the shared per-frame clock. Call once at the top of each animation
+  // frame, before updateCan(), so the returned dt can drive its damping.
+  beginFrame(): number {
+    this.lastDt = Math.min(this.clock.getDelta(), 0.05);
+    return this.lastDt;
+  }
+
   tick() {
-    const dt = Math.min(this.clock.getDelta(), 0.05);
-    this.idleT += dt;
-    this.particles.update(dt);
+    this.idleT += this.lastDt;
+    this.particles.update(this.lastDt);
     this.renderer.render(this.scene, this.camera);
   }
 }

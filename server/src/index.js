@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { drawDab, dabBounds, NOZZLES } from "./spray.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(__dirname, "..", "data");
+const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(__dirname, "..", "data");
 const WALL_PATH = path.join(DATA_DIR, "wall.png");
 const CLIENT_DIST = path.join(__dirname, "..", "..", "client", "dist");
 

@@ -33,7 +33,7 @@ ui.onNozzleChange = () => {
 };
 ui.onFirstInteraction = () => audio.init();
 
-const pointerNDC = { x: 0, y: 9999 }; // start off-screen so the can is hidden until first move
+const pointerNDC = { x: 0, y: 0 }; // center of screen, so the can has a sane target before the first move
 let isDown = false;
 let lastDabTime = 0;
 const DAB_INTERVAL_MS = 26;
@@ -74,8 +74,10 @@ function randomSeed() {
 }
 
 function frame() {
+  const dt = scene.beginFrame();
   const hit = scene.raycastWall(pointerNDC.x, pointerNDC.y);
-  scene.updateCan(hit ? hit.point : null, isDown);
+  const aimPoint = scene.raycastAimPlane(pointerNDC.x, pointerNDC.y);
+  scene.updateCan(aimPoint, isDown, dt);
 
   if (isDown && hit) {
     const now = performance.now();
