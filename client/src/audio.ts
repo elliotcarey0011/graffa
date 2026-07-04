@@ -1,5 +1,6 @@
-// All sound effects are synthesized with the Web Audio API (filtered noise),
-// so there are no external audio assets to fetch or license.
+// Most sound effects are synthesized with the Web Audio API (filtered noise);
+// the can-shake heard on a color change is a recorded sample instead.
+import shakeSampleUrl from "../assets/spray_can_shake.mp3";
 
 interface NozzleAudioProfile {
   freq: number;
@@ -26,6 +27,7 @@ interface SprayChain {
 export class SprayAudio {
   private ctx: AudioContext | null = null;
   private noiseBuffer: AudioBuffer | null = null;
+  private shakeBuffer: AudioBuffer | null = null;
   private master: GainNode | null = null;
   private active: SprayChain | null = null;
 
@@ -37,6 +39,18 @@ export class SprayAudio {
     this.master.gain.value = 0.7;
     this.master.connect(this.ctx.destination);
     this.noiseBuffer = this.buildPinkNoiseBuffer(this.ctx);
+    this.loadShakeSample();
+  }
+
+  private async loadShakeSample() {
+    if (!this.ctx) return;
+    try {
+      const res = await fetch(shakeSampleUrl);
+      const arrayBuf = await res.arrayBuffer();
+      this.shakeBuffer = await this.ctx.decodeAudioData(arrayBuf);
+    } catch (err) {
+      console.warn("Failed to load can-shake sample, falling back to synthesized shake.", err);
+    }
   }
 
   private ensureRunning() {
@@ -112,6 +126,22 @@ export class SprayAudio {
     source.stop(now + 0.12);
     lfo.stop(now + 0.12);
     this.active = null;
+  }
+
+  playShakeSample() {
+    if (!this.ctx || !this.master) return;
+    this.ensureRunning();
+    if (!this.shakeBuffer) {
+      this.shake();
+      return;
+    }
+    const source = this.ctx.createBufferSource();
+    source.buffer = this.shakeBuffer;
+    const gain = this.ctx.createGain();
+    gain.gain.value = 0.8;
+    source.connect(gain);
+    gain.connect(this.master);
+    source.start();
   }
 
   shake() {

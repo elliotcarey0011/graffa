@@ -12,6 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(__dirname, "..", "data");
 const WALL_PATH = path.join(DATA_DIR, "wall.png");
 const CLIENT_DIST = path.join(__dirname, "..", "..", "client", "dist");
+const BACKGROUND_IMAGE_PATH = path.join(__dirname, "..", "..", "client", "assets", "background.jpg");
 
 const WIDTH = 2048;
 const HEIGHT = 1024;
@@ -46,6 +47,26 @@ function paintBaseWall() {
   ctx.globalAlpha = 1;
 }
 
+// Draws `img` scaled and center-cropped to fill (w, h) exactly, like CSS
+// `background-size: cover`, so the aspect ratio isn't distorted.
+function drawImageCover(img, w, h) {
+  const imgRatio = img.width / img.height;
+  const targetRatio = w / h;
+  let sx, sy, sw, sh;
+  if (imgRatio > targetRatio) {
+    sh = img.height;
+    sw = sh * targetRatio;
+    sx = (img.width - sw) / 2;
+    sy = 0;
+  } else {
+    sw = img.width;
+    sh = sw / targetRatio;
+    sx = 0;
+    sy = (img.height - sh) / 2;
+  }
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+}
+
 async function loadWall() {
   if (existsSync(WALL_PATH)) {
     try {
@@ -55,6 +76,16 @@ async function loadWall() {
       return;
     } catch (err) {
       console.warn("Failed to load saved wall, starting fresh.", err);
+    }
+  }
+  if (existsSync(BACKGROUND_IMAGE_PATH)) {
+    try {
+      const img = await loadImage(BACKGROUND_IMAGE_PATH);
+      drawImageCover(img, WIDTH, HEIGHT);
+      console.log("Loaded background.jpg as the base wall.");
+      return;
+    } catch (err) {
+      console.warn("Failed to load background.jpg, falling back to procedural wall.", err);
     }
   }
   paintBaseWall();

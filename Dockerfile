@@ -18,6 +18,7 @@ ENV NODE_ENV=production
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/server ./server
 COPY --from=build /app/client/dist ./client/dist
+COPY --from=build /app/client/assets ./client/assets
 
 EXPOSE 8787
 CMD ["node", "server/src/index.js"]

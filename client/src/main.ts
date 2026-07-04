@@ -25,7 +25,7 @@ scene.setCapColor(ui.selectedColor);
 
 ui.onColorChange = (hex) => {
   scene.setCapColor(hex);
-  audio.shake();
+  audio.playShakeSample();
 };
 ui.onNozzleChange = () => {
   audio.shake();
