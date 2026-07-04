@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+    <title>Graffa &mdash; The Communal Wall</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="scene-root"></div>
+
+    <div id="hud">
+      <div id="status-pill">
+        <span id="status-dot" class="dot offline"></span>
+        <span id="user-count">connecting&hellip;</span>
+      </div>
+    </div>
+
+    <div id="intro-overlay">
+      <div id="intro-card">
+        <h1>GRAFFA</h1>
+        <p>A wall that everyone shares. Whatever you spray here, everyone sees &mdash; forever (or until it's painted over).</p>
+        <p class="hint">Click and drag on the wall to spray. Pick a color and nozzle below.</p>
+        <button id="intro-dismiss">Pick up the can</button>
+      </div>
+    </div>
+
+    <div id="toolbar">
+      <div class="tool-group" id="color-group"></div>
+      <div class="tool-group" id="nozzle-group"></div>
+      <div class="tool-group" id="size-group">
+        <input type="range" id="size-slider" min="0.5" max="1.8" step="0.05" value="1" />
+        <label for="size-slider">size</label>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
