@@ -28,7 +28,7 @@ ui.onColorChange = (hex) => {
   audio.playShakeSample();
 };
 ui.onNozzleChange = () => {
-  audio.shake();
+  audio.playSnapSample();
   if (isDown) audio.startSpray(ui.selectedNozzle);
 };
 ui.onFirstInteraction = () => audio.init();

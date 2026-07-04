@@ -1,6 +1,8 @@
 // Most sound effects are synthesized with the Web Audio API (filtered noise);
-// the can-shake heard on a color change is a recorded sample instead.
+// the can-shake (color change) and cap-snap (nozzle change) sounds are
+// recorded samples instead.
 import shakeSampleUrl from "../assets/spray_can_shake.mp3";
+import snapSampleUrl from "../assets/snap.mp3";
 
 interface NozzleAudioProfile {
   freq: number;
@@ -28,6 +30,7 @@ export class SprayAudio {
   private ctx: AudioContext | null = null;
   private noiseBuffer: AudioBuffer | null = null;
   private shakeBuffer: AudioBuffer | null = null;
+  private snapBuffer: AudioBuffer | null = null;
   private master: GainNode | null = null;
   private active: SprayChain | null = null;
 
@@ -39,17 +42,19 @@ export class SprayAudio {
     this.master.gain.value = 0.7;
     this.master.connect(this.ctx.destination);
     this.noiseBuffer = this.buildPinkNoiseBuffer(this.ctx);
-    this.loadShakeSample();
+    this.loadSample(shakeSampleUrl).then((buf) => (this.shakeBuffer = buf));
+    this.loadSample(snapSampleUrl).then((buf) => (this.snapBuffer = buf));
   }
 
-  private async loadShakeSample() {
-    if (!this.ctx) return;
+  private async loadSample(url: string): Promise<AudioBuffer | null> {
+    if (!this.ctx) return null;
     try {
-      const res = await fetch(shakeSampleUrl);
+      const res = await fetch(url);
       const arrayBuf = await res.arrayBuffer();
-      this.shakeBuffer = await this.ctx.decodeAudioData(arrayBuf);
+      return await this.ctx.decodeAudioData(arrayBuf);
     } catch (err) {
-      console.warn("Failed to load can-shake sample, falling back to synthesized shake.", err);
+      console.warn(`Failed to load sample ${url}, will fall back to a synthesized sound.`, err);
+      return null;
     }
   }
 
@@ -129,16 +134,24 @@ export class SprayAudio {
   }
 
   playShakeSample() {
+    this.playSample(this.shakeBuffer, 0.8, () => this.shake());
+  }
+
+  playSnapSample() {
+    this.playSample(this.snapBuffer, 0.9, () => this.shake());
+  }
+
+  private playSample(buffer: AudioBuffer | null, gainValue: number, fallback: () => void) {
     if (!this.ctx || !this.master) return;
     this.ensureRunning();
-    if (!this.shakeBuffer) {
-      this.shake();
+    if (!buffer) {
+      fallback();
       return;
     }
     const source = this.ctx.createBufferSource();
-    source.buffer = this.shakeBuffer;
+    source.buffer = buffer;
     const gain = this.ctx.createGain();
-    gain.gain.value = 0.8;
+    gain.gain.value = gainValue;
     source.connect(gain);
     gain.connect(this.master);
     source.start();
