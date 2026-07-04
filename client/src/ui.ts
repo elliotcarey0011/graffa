@@ -4,10 +4,12 @@ export class ToolbarUI {
   selectedColor = COLOR_PALETTE[3];
   selectedNozzle = "standard";
   size = 1;
+  flow = 1;
 
   onColorChange: (hex: string) => void = () => {};
   onNozzleChange: (key: string) => void = () => {};
   onSizeChange: (size: number) => void = () => {};
+  onFlowChange: (flow: number) => void = () => {};
   onFirstInteraction: () => void = () => {};
 
   private statusDot = document.getElementById("status-dot")!;
@@ -18,6 +20,7 @@ export class ToolbarUI {
     this.buildColorSwatches();
     this.buildNozzleButtons();
     this.wireSizeSlider();
+    this.wireFlowSlider();
     this.wireIntro();
   }
 
@@ -99,6 +102,14 @@ export class ToolbarUI {
     slider.addEventListener("input", () => {
       this.size = parseFloat(slider.value);
       this.onSizeChange(this.size);
+    });
+  }
+
+  private wireFlowSlider() {
+    const slider = document.getElementById("flow-slider") as HTMLInputElement;
+    slider.addEventListener("input", () => {
+      this.flow = parseFloat(slider.value);
+      this.onFlowChange(this.flow);
     });
   }
 

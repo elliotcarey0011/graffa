@@ -160,16 +160,21 @@ body {
   border-right: 1px solid var(--panel-border);
 }
 
-#size-group {
-  border-right: none;
-  padding-right: 0;
+#size-group,
+#flow-group {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
 }
 
-#size-group label {
+#flow-group {
+  border-right: none;
+  padding-right: 0;
+}
+
+#size-group label,
+#flow-group label {
   font-size: 10px;
   color: var(--text-dim);
   text-transform: uppercase;
@@ -251,7 +256,8 @@ body {
   opacity: 0.85;
 }
 
-#size-slider {
+#size-slider,
+#flow-slider {
   width: 90px;
   accent-color: var(--accent);
 }

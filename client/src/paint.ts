@@ -8,6 +8,7 @@ export interface Dab {
   color: string;
   nozzle: string;
   size: number;
+  flow: number;
   seed: number;
 }
 

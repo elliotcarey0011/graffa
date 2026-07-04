@@ -88,6 +88,7 @@ function sanitizeDab(raw) {
   const x = Number(raw.x);
   const y = Number(raw.y);
   const size = Number(raw.size);
+  const flow = Number(raw.flow);
   const seed = Number(raw.seed);
   if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
   if (!Number.isFinite(size) || !Number.isFinite(seed)) return null;
@@ -99,6 +100,7 @@ function sanitizeDab(raw) {
     color: raw.color,
     nozzle: raw.nozzle,
     size: clamp(size, 0.3, 2.5),
+    flow: clamp(Number.isFinite(flow) ? flow : 1, 0.4, 1.4),
     seed: Math.floor(seed) >>> 0,
   };
 }

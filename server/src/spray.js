@@ -39,23 +39,41 @@ export function dabBounds(dab) {
   };
 }
 
+// Flow above 1 (up to the slider's max of 1.4) makes the trigger "fuller":
+// besides firing more often, each dab itself lays down denser, more opaque
+// paint, so holding max flow reads as a solid fill rather than a fast speckle.
+const MAX_FLOW = 1.4;
+
 export function drawDab(ctx, dab) {
   const nozzle = NOZZLES[dab.nozzle] || NOZZLES.standard;
   const sizeScale = dab.size || 1;
   const rand = mulberry32(dab.seed >>> 0);
   const radius = nozzle.radius * sizeScale;
+  const flowT = clamp(((dab.flow || 1) - 1) / (MAX_FLOW - 1), 0, 1);
+  const density = Math.round(nozzle.density * (1 + flowT * 1.5));
 
   ctx.save();
   ctx.fillStyle = dab.color;
 
-  for (let i = 0; i < nozzle.density; i++) {
+  if (flowT > 0) {
+    // Guarantees solid coverage at high flow regardless of dot-placement luck or
+    // how many dabs land per second — the stippled dots below add texture on top.
+    ctx.globalAlpha = flowT;
+    ctx.beginPath();
+    ctx.arc(dab.x, dab.y, radius * nozzle.spread, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  for (let i = 0; i < density; i++) {
     const angle = rand() * Math.PI * 2;
     const r = Math.pow(rand(), 0.5) * radius * nozzle.spread;
     const dx = dab.x + Math.cos(angle) * r;
     const dy = dab.y + Math.sin(angle) * r;
     const dotR = (nozzle.dotMin + rand() * (nozzle.dotMax - nozzle.dotMin)) * sizeScale;
-    const edgeFactor = 1 - clamp(r / (radius * nozzle.spread + 0.001), 0, 1);
-    const a = clamp(nozzle.alpha * (0.25 + 0.75 * edgeFactor) * (0.65 + 0.35 * rand()), 0, 1);
+    let edgeFactor = 1 - clamp(r / (radius * nozzle.spread + 0.001), 0, 1);
+    edgeFactor = edgeFactor + flowT * (1 - edgeFactor);
+    let a = clamp(nozzle.alpha * (0.25 + 0.75 * edgeFactor) * (0.65 + 0.35 * rand()), 0, 1);
+    a = clamp(a + flowT * (1 - a), 0, 1);
 
     ctx.globalAlpha = a;
     ctx.beginPath();

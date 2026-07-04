@@ -36,7 +36,7 @@ ui.onFirstInteraction = () => audio.init();
 const pointerNDC = { x: 0, y: 0 }; // center of screen, so the can has a sane target before the first move
 let isDown = false;
 let lastDabTime = 0;
-const DAB_INTERVAL_MS = 26;
+const BASE_DAB_INTERVAL_MS = 26;
 
 function updatePointerNDC(clientX: number, clientY: number) {
   pointerNDC.x = (clientX / window.innerWidth) * 2 - 1;
@@ -81,7 +81,8 @@ function frame() {
 
   if (isDown && hit) {
     const now = performance.now();
-    if (now - lastDabTime >= DAB_INTERVAL_MS) {
+    const dabInterval = BASE_DAB_INTERVAL_MS / ui.flow;
+    if (now - lastDabTime >= dabInterval) {
       lastDabTime = now;
       const nozzle = NOZZLES[ui.selectedNozzle as keyof typeof NOZZLES] || NOZZLES.standard;
       const jitter = nozzle.radius * 0.12 * ui.size;
@@ -91,6 +92,7 @@ function frame() {
         color: ui.selectedColor,
         nozzle: ui.selectedNozzle,
         size: ui.size,
+        flow: ui.flow,
         seed: randomSeed(),
       };
       paintSurface.applyDabLocally(dab);
